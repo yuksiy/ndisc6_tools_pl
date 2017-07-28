@@ -6,14 +6,16 @@ exec_prefix ?= $(prefix)
 
 scriptbindir ?= $(prefix)/sbin
 datadir ?= $(prefix)/lib/site_perl
+datarootdir ?= $(prefix)/share
 
 bindir ?= $(exec_prefix)/bin
 libdir ?= $(exec_prefix)/lib
 sbindir ?= $(exec_prefix)/sbin
 
 sysconfdir ?= $(prefix)/etc
-infodir ?= $(prefix)/info
-mandir ?= $(prefix)/man
+docdir ?= $(datarootdir)/doc/$(PROJ)
+infodir ?= $(datarootdir)/info
+mandir ?= $(datarootdir)/man
 localstatedir ?= $(prefix)/var
 
 CHECK_SCRIPT_SH = /bin/sh -n
@@ -29,9 +31,10 @@ INSTALL_DATA = $(INSTALL) -m 644
 
 # Macro Defines
 PROJ = ndisc6_tools_pl
-VER = 1.0.0
+VER = 1.0.1
+TAG = v$(VER)
 
-PKG_SORT_KEY ?= 6,6
+TAR_SORT_KEY ?= 6,6
 
 SUBDIRS-TEST-SCRIPTS-SH = \
 
@@ -60,6 +63,10 @@ SCRIPTS = \
 DATA = \
 				$(SCRIPTS-PM) \
 
+DOC = \
+				LICENSE \
+				README.md \
+
 # Target List
 test-recursive \
 :
@@ -75,14 +82,6 @@ all: \
 				$(PROGRAMS) \
 				$(SCRIPTS) \
 				$(DATA) \
-
-# Executables
-
-# Source Objects
-
-# Clean Up Everything
-clean:
-	rm -f *.$(o) $(PROGRAMS)
 
 # Check
 check: check-SCRIPTS-SH check-SCRIPTS-PL check-SCRIPTS-PM
@@ -113,7 +112,7 @@ test:
 	$(MAKE) test-recursive
 
 # Install
-install: install-SCRIPTS install-DATA
+install: install-SCRIPTS install-DATA install-DOC
 
 install-SCRIPTS:
 	@list='$(SCRIPTS)'; \
@@ -139,10 +138,28 @@ install-DATA:
 		$(INSTALL_DATA) $$i $(DESTDIR)$(datadir)/$$i; \
 	done
 
+install-DOC:
+	@list='$(DOC)'; \
+	for i in $$list; do \
+		dir="`dirname \"$(DESTDIR)$(docdir)/$$i\"`"; \
+		if [ ! -d "$$dir/" ]; then \
+			echo " mkdir -p $$dir/"; \
+			mkdir -p $$dir/; \
+		fi;\
+		echo " $(INSTALL_DATA) $$i $(DESTDIR)$(docdir)/$$i"; \
+		$(INSTALL_DATA) $$i $(DESTDIR)$(docdir)/$$i; \
+	done
+
 # Pkg
 pkg:
 	@$(MAKE) DESTDIR=$(CURDIR)/$(PROJ)-$(VER).$(ENVTYPE) install; \
 	tar cvf ./$(PROJ)-$(VER).$(ENVTYPE).tar ./$(PROJ)-$(VER).$(ENVTYPE) > /dev/null; \
-	tar tvf ./$(PROJ)-$(VER).$(ENVTYPE).tar 2>&1 | sort -k $(PKG_SORT_KEY) | tee ./$(PROJ)-$(VER).$(ENVTYPE).tar.list.txt; \
+	tar tvf ./$(PROJ)-$(VER).$(ENVTYPE).tar 2>&1 | sort -k $(TAR_SORT_KEY) | tee ./$(PROJ)-$(VER).$(ENVTYPE).tar.list.txt; \
 	gzip -f ./$(PROJ)-$(VER).$(ENVTYPE).tar; \
 	rm -fr ./$(PROJ)-$(VER).$(ENVTYPE)
+
+# Dist
+dist:
+	@git archive --format=tar --prefix=$(PROJ)-$(VER)/ $(TAG) > ../$(PROJ)-$(VER).tar; \
+	tar tvf ../$(PROJ)-$(VER).tar 2>&1 | sort -k $(TAR_SORT_KEY) | tee ../$(PROJ)-$(VER).tar.list.txt; \
+	gzip -f ../$(PROJ)-$(VER).tar
